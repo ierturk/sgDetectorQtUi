@@ -15,7 +15,6 @@ MainWindow::MainWindow(QWidget *parent)
     qtimer = new QTimer(this);
 
     ortNet = new OrtNet();
-
     ortNet->Init("/home/ierturk/Work/REPOs/ssd/ssdIE/outputs/mobilenet_v2_ssd320_clk_trainval2019/model_040000.onnx");
 }
 
@@ -58,6 +57,7 @@ void MainWindow::processFrameAndUpdateGUI()
     if(matOriginal.empty() == true) return;
 
     ortNet->setInputTensor(matOriginal);
+
     auto start = std::chrono::high_resolution_clock::now();
     ortNet->forward();
 
@@ -93,14 +93,15 @@ void MainWindow::on_loadButton_clicked()
                     tr("Open Images"),
                     "/home/ierturk/Work/REPOs/data/farmData/",
                     tr("mp4 File (*.mp4);; avi File (*.avi)"));
-}
+    }
 
 void MainWindow::on_playButton_clicked()
 {
-    std::string file = VideoName.toUtf8().constData();
-    capWebcam.open(file);
+    std::string file = "filesrc location=" + VideoName.toStdString() + " ! decodebin ! videoconvert ! videoflip method=clockwise ! appsink";
+    // capWebcam.open("filesrc location=/home/ierturk/Work/REPOs/data/farmData/vlc-record-2019-09-04-18h28m21s-rtsp___192.168.1.37_554_ch01.264-.mp4 ! decodebin ! videoscale ! videoconvert ! videoflip method=clockwise ! appsink", cv::CAP_GSTREAMER);
+    capWebcam.open(file, cv::CAP_GSTREAMER);
     if(capWebcam.isOpened() == false) {
-        std::cout <<"error: capWebcam not accessed successfully";
+        std::cout << "error: capWebcam not accessed successfully";
         return;
     }
     else

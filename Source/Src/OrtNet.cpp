@@ -1,4 +1,9 @@
 #include "OrtNet.h"
+#include <QtCore/QFile>
+#include <QtCore/QJsonParseError>
+#include <QtCore/QJsonArray>
+#include <QtCore/QJsonObject>
+#include <QDebug>
 
 OrtNet::OrtNet()
 {
@@ -70,26 +75,41 @@ void OrtNet::Init(const char* model_path)
         for (size_t j = 0; j < output_node_dims[i].size(); j++)
 			printf("Output %d : dim %d=%jd\n", i, j, output_node_dims[i][j]);
 	}
+
+    QFile inFile("/home/ierturk/Work/REPOs/ssd/yoloData/clk/train.json");
+     inFile.open(QIODevice::ReadOnly|QIODevice::Text);
+     QByteArray data = inFile.readAll();
+     inFile.close();
+
+     QJsonParseError errorPtr{};
+     QJsonDocument doc = QJsonDocument::fromJson(data, &errorPtr);
+     if (doc.isNull()) {
+         qDebug() << "Parse failed";
+
+     }
+
+     QJsonObject rootObj = doc.object();
+     QJsonArray ptsArray = rootObj.value("categories").toArray();
+
+     for(auto && i : ptsArray) {
+         classes.emplace_back(i.toObject().value("name").toString().toUtf8().constData());
+     }
 }
 
 
 void OrtNet::setInputTensor(const cv::Mat& frame)
 {
 	static cv::Mat blob;
-
-    cv::rotate(frame, inputImage, cv::ROTATE_90_CLOCKWISE);
+    inputImage = frame;
 
 	blob = cv::dnn::blobFromImage(
-        inputImage,
+        frame,
 		1.0,
 		cv::Size(320,320),
 		cv::Scalar(123, 117, 104),
 		true, 
 		false, 
 		CV_32F);
-
-	// auto bfi = blob.ptr<float[307200]>();
-	// std::cout << bfi[] << std::endl;
 	
 	input_tensor = Ort::Value::CreateTensor<float>(
 		allocator_info,
@@ -97,15 +117,8 @@ void OrtNet::setInputTensor(const cv::Mat& frame)
 		input_node_sizes[0],
 		input_node_dims[0].data(),
 		input_node_dims[0].size());
-	assert(input_tensor.IsTensor());
 
-/*
-	auto it = input_tensor.GetTensorMutableData<float>();
-	auto info = input_tensor.GetTensorTypeAndShapeInfo();
-	auto cnt = info.GetElementCount();
-	auto t = info.GetShape();
-	cnt;
-*/
+	assert(input_tensor.IsTensor());
 }
 
 void OrtNet::forward()

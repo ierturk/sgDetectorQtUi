@@ -47,4 +47,11 @@ private:
 	float* boxes = NULL;
 	std::pair<float*, float*> outs = std::pair<float*, float*>();
     cv::Mat inputImage;
+
+
+    unsigned int input_width = 320;
+    unsigned int input_height = 320;
+    float confThreshold = 0.5f;
+    float nmsThreshold = 0.4f;
+    std::vector<std::string> classes;
 };
