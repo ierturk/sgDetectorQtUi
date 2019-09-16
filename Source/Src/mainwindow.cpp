@@ -80,7 +80,7 @@ void MainWindow::processFrameAndUpdateGUI()
     ui->horizontalSlider->setValue(getCurrentFrame());
 
     // ui->lblPlay->setPixmap(QPixmap::fromImage(qimgOriginal));
-    ui->lblPlay->setPixmap(QPixmap::fromImage(ortNet->getProcessedImage()));
+    ui->lblPlay->setPixmap(QPixmap::fromImage(ortNet->getProcessedFrame()));
 
     ui->lblPlay->setScaledContents( true );
     ui->lblPlay->setSizePolicy( QSizePolicy::Ignored, QSizePolicy::Ignored );

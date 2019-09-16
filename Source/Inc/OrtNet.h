@@ -20,8 +20,9 @@ public:
 	// Ort::Value getInputTensor(Mat blob);
 	void setInputTensor(const cv::Mat& frame);
 	void forward();
-	std::pair<float*, float*> getOuts();
-    QImage getProcessedImage();
+    QImage getProcessedFrame();
+
+    void postprocess();
 
 private:
 	// Ort Environment
@@ -32,7 +33,7 @@ private:
 	Ort::AllocatorInfo allocator_info = Ort::AllocatorInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
 
 
-	// Model ***
+    // Model
 	// Inputs
 	std::vector<const char*> input_node_names = std::vector<const char*>();
 	std::vector<size_t> input_node_sizes = std::vector<size_t>();
@@ -43,10 +44,10 @@ private:
 	std::vector<size_t> output_node_sizes = std::vector<size_t>();
 	std::vector<std::vector<int64_t>> output_node_dims = std::vector<std::vector<int64_t>>();
 	std::vector<Ort::Value> output_tensor = std::vector<Ort::Value>();
-	float *scores = NULL;
+    float* scores = NULL;
 	float* boxes = NULL;
-	std::pair<float*, float*> outs = std::pair<float*, float*>();
-    cv::Mat inputImage;
+    // std::pair<float*, float*> outs = std::pair<float*, float*>();
+    cv::Mat frame;
 
 
     unsigned int input_width = 320;
@@ -54,4 +55,6 @@ private:
     float confThreshold = 0.5f;
     float nmsThreshold = 0.4f;
     std::vector<std::string> classes;
+
+    void drawPred(int classId, float conf, int left, int top, int right, int bottom);
 };
