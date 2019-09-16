@@ -15,7 +15,7 @@ public:
 	~OrtNet();
 
 
-	void Init(const char* model_path);
+    void Init(const char* model_path);
 
 	// Ort::Value getInputTensor(Mat blob);
 	void setInputTensor(const cv::Mat& frame);
@@ -26,7 +26,7 @@ public:
 
 private:
 	// Ort Environment
-	Ort::Env env = Ort::Env(nullptr);
+    // Ort::Env env = Ort::Env(nullptr);
 	Ort::Session session = Ort::Session(nullptr);
 	Ort::SessionOptions session_options;
 	Ort::Allocator allocator = Ort::Allocator::CreateDefault();

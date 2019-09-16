@@ -1,43 +1,37 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
-QString VideoName;
-int snapCount = 0;
-
-
+Ort::Env ortEnv = Ort::Env(nullptr);
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
-    , ui(new Ui::MainWindow)
-{
-    ui->setupUi(this);
-    ui->horizontalSlider->setEnabled(false);
-    qtimer = new QTimer(this);
+    , ui(new Ui::MainWindow) {
 
-    ortNet = new OrtNet();
-    ortNet->Init("/home/ierturk/Work/REPOs/ssd/ssdIE/outputs/mobilenet_v2_ssd320_clk_trainval2019/model_040000.onnx");
+    ui->setupUi(this);
+    qtimerRight = new QTimer(this);
+    qtimerLeft = new QTimer(this);
+
+    connect(ui->btnPlayRight, &QAbstractButton::clicked, this, [this]{on_btnPlay_clicked(true);});
+    connect(ui->btnPlayLeft, &QAbstractButton::clicked, this, [this]{on_btnPlay_clicked(false);});
+    connect(ui->btnPauseRight, &QAbstractButton::clicked, this, [this]{on_btnPause_clicked(true);});
+    connect(ui->btnPauseLeft, &QAbstractButton::clicked, this, [this]{on_btnPause_clicked(false);});
+
+
+    ortEnv = Ort::Env(ORT_LOGGING_LEVEL_WARNING, "OrtEnv");
+
+    ortNetRight = new OrtNet();
+    ortNetLeft = new OrtNet();
+
+    ortNetRight->Init("/home/ierturk/Work/REPOs/ssd/ssdIE/outputs/mobilenet_v2_ssd320_clk_trainval2019/model_040000.onnx");
+    ortNetLeft->Init("/home/ierturk/Work/REPOs/ssd/ssdIE/outputs/mobilenet_v2_ssd320_clk_trainval2019/model_040000.onnx");
 }
 
-MainWindow::~MainWindow()
-{
+MainWindow::~MainWindow() {
     delete ui;
 }
 
-double MainWindow::getCurrentFrame()
-{
-    return capWebcam.get(cv::CAP_PROP_POS_FRAMES);
-}
-double MainWindow::getNumberOfFrames()
-{
-    return capWebcam.get(cv::CAP_PROP_FRAME_COUNT);
-}
-double MainWindow::getFrameRate()
-{
-    return capWebcam.get(cv::CAP_PROP_FPS);
-}
 
-QString MainWindow::getFormattedTime(int timeInSeconds)
-{
+QString MainWindow::getFormattedTime(int timeInSeconds) {
     int seconds = (int) (timeInSeconds) % 60 ;
     int minutes = (int) ((timeInSeconds / 60) % 60);
     int hours   = (int) ((timeInSeconds / (60*60)) % 24);
@@ -49,118 +43,101 @@ QString MainWindow::getFormattedTime(int timeInSeconds)
 }
 
 
-void MainWindow::processFrameAndUpdateGUI()
-{
-    cv::VideoCapture vc;
+void MainWindow::processFrameAndUpdateGUI(bool side) {
 
-    capWebcam.read(matOriginal);
-    if(matOriginal.empty() == true) return;
+    cv::Mat frame;
+    if(side) {
+        captureRight.read(frame);
+        if(frame.empty()) return;
 
-    ortNet->setInputTensor(matOriginal);
+        ortNetRight->setInputTensor(frame);
+        ortNetRight->forward();
+        ui->lblTimerRight->setText(
+                    getFormattedTime(
+                        (int)captureRight.get(cv::CAP_PROP_POS_FRAMES)
+                        / (int)captureRight.get(cv::CAP_PROP_FPS)));
 
-    auto start = std::chrono::high_resolution_clock::now();
-    ortNet->forward();
+        ui->lblPlayerRight->setPixmap(QPixmap::fromImage(ortNetRight->getProcessedFrame()));
+        ui->lblPlayerRight->setScaledContents(true);
+        ui->lblPlayerRight->setSizePolicy( QSizePolicy::Ignored, QSizePolicy::Ignored );
+    } else {
+        captureLeft.read(frame);
+        if(frame.empty()) return;
 
-    auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-    std::cout << "inference time : " << duration.count() << " ms" << '\n';
+        ortNetLeft->setInputTensor(frame);
+        ortNetLeft->forward();
+        ui->lblTimerLeft->setText(
+                    getFormattedTime(
+                        (int)captureLeft.get(cv::CAP_PROP_POS_FRAMES)
+                        / (int)captureLeft.get(cv::CAP_PROP_FPS)));
 
-/*
-    cv::cvtColor(matOriginal, matOriginal, cv::COLOR_BGR2RGB);
-    cv::rotate(matOriginal, matOriginal, cv::ROTATE_90_CLOCKWISE);
+        ui->lblPlayerLeft->setPixmap(QPixmap::fromImage(ortNetLeft->getProcessedFrame()));
+        ui->lblPlayerLeft->setScaledContents(true);
+        ui->lblPlayerLeft->setSizePolicy( QSizePolicy::Ignored, QSizePolicy::Ignored );
 
-    QImage qimgOriginal(
-                (uchar*)matOriginal.data,
-                matOriginal.cols,
-                matOriginal.rows,
-                matOriginal.step,
-                QImage::Format_RGB888);
-*/
-    ui->label_2->setText( getFormattedTime( (int)getCurrentFrame()/(int)getFrameRate()) );
-    ui->horizontalSlider->setValue(getCurrentFrame());
-
-    // ui->lblPlay->setPixmap(QPixmap::fromImage(qimgOriginal));
-    ui->lblPlay->setPixmap(QPixmap::fromImage(ortNet->getProcessedFrame()));
-
-    ui->lblPlay->setScaledContents( true );
-    ui->lblPlay->setSizePolicy( QSizePolicy::Ignored, QSizePolicy::Ignored );
-}
-
-void MainWindow::on_loadButton_clicked()
-{
-    VideoName = QFileDialog::getOpenFileName(
-                    this,
-                    tr("Open Images"),
-                    "/home/ierturk/Work/REPOs/data/farmData/",
-                    tr("mp4 File (*.mp4);; avi File (*.avi)"));
-    }
-
-void MainWindow::on_playButton_clicked()
-{
-    std::string file = "filesrc location=" + VideoName.toStdString() + " ! decodebin ! videoconvert ! videoflip method=clockwise ! appsink";
-    // capWebcam.open("filesrc location=/home/ierturk/Work/REPOs/data/farmData/vlc-record-2019-09-04-18h28m21s-rtsp___192.168.1.37_554_ch01.264-.mp4 ! decodebin ! videoscale ! videoconvert ! videoflip method=clockwise ! appsink", cv::CAP_GSTREAMER);
-    capWebcam.open(file, cv::CAP_GSTREAMER);
-    if(capWebcam.isOpened() == false) {
-        std::cout << "error: capWebcam not accessed successfully";
-        return;
-    }
-    else
-    {
-        ui->horizontalSlider->setEnabled(true);
-        ui->horizontalSlider->setMaximum(getNumberOfFrames());
-        ui->label_2->setText( getFormattedTime( (int)getCurrentFrame()/(int)getFrameRate()) );
-        connect(qtimer, SIGNAL(timeout()), this, SLOT(processFrameAndUpdateGUI()));
-        qtimer->start();
     }
 }
 
-void MainWindow::on_pushButton_3_clicked()
+void MainWindow::on_btnPlay_clicked(bool side)
 {
-    if(qtimer->isActive() == true)
-    {
-        qtimer->stop();
-        ui->pushButton_3->setText("Resume");
+    QString fname = QFileDialog::getOpenFileName(
+                        this,
+                        tr("Open Images"),
+                        "/home/ierturk/Work/REPOs/data/farmData/",
+                        tr("mp4 File (*.mp4);; avi File (*.avi)"));
+
+    std::string stream = "filesrc location=" + fname.toStdString() + " ! decodebin ! videoconvert ! videoflip method=clockwise ! appsink";
+
+    if(side) {
+        captureRight.open(stream, cv::CAP_GSTREAMER);
+        if(captureRight.isOpened() == false) {
+            std::cout << "error: Right side capture is not accessed successfully";
+            return;
+        } else {
+
+            ui->lblTimerRight->setText(
+                        getFormattedTime(
+                            (int)captureRight.get(cv::CAP_PROP_POS_FRAMES)
+                            / (int)captureRight.get(cv::CAP_PROP_FPS)));
+
+            connect(qtimerRight, &QTimer::timeout, this, [this]{processFrameAndUpdateGUI(true);});
+            qtimerRight->start();
+        }
+    } else {
+        captureLeft.open(stream, cv::CAP_GSTREAMER);
+        if(captureLeft.isOpened() == false) {
+            std::cout << "error: Left side capture is not accessed successfully";
+            return;
+        } else {
+
+            ui->lblTimerLeft->setText(
+                        getFormattedTime(
+                            (int)captureLeft.get(cv::CAP_PROP_POS_FRAMES)
+                            / (int)captureLeft.get(cv::CAP_PROP_FPS)));
+
+            connect(qtimerLeft, &QTimer::timeout, this, [this]{processFrameAndUpdateGUI(false);});
+            qtimerLeft->start();
+        }
     }
-    else
-    {
-        qtimer->start(0);
-        ui->pushButton_3->setText("Pause");
+}
+
+void MainWindow::on_btnPause_clicked(bool side) {
+    if(side) {
+        if(qtimerRight->isActive()) {
+            qtimerRight->stop();
+            ui->btnPauseRight->setText("Resume");
+        } else {
+            qtimerRight->start();
+            ui->btnPauseRight->setText("Pause");
+        }
+    } else {
+        if(qtimerLeft->isActive()) {
+            qtimerLeft->stop();
+            ui->btnPauseLeft->setText("Resume");
+        } else {
+            qtimerLeft->start();
+            ui->btnPauseLeft->setText("Pause");
+        }
+
     }
-}
-
-void MainWindow::on_horizontalSlider_sliderPressed()
-{
-    qtimer->stop();
-}
-
-void MainWindow::on_horizontalSlider_sliderReleased()
-{
-    qtimer->start(0);
-}
-
-void MainWindow :: setCurrentFrame(int frameNumber)
-{
-    capWebcam.set(cv::CAP_PROP_POS_FRAMES, frameNumber);
-}
-
-void MainWindow::on_horizontalSlider_sliderMoved(int position)
-{
-    setCurrentFrame(position);
-    ui->label_2->setText( getFormattedTime( position/(int)getFrameRate()) );
-}
-
-void MainWindow::on_actionOpen_triggered()
-{
-    VideoName = QFileDialog::getOpenFileName(
-                    this,
-                    tr("Open Images"),
-                    "/home/",
-                    tr("mp4 File (*.mp4);; avi File (*.avi)"));
-}
-
-void MainWindow::on_pushButton_clicked()
-{
-    snapCount++;
-    cv::String s="snap",s1=std::to_string(snapCount),s2=".jpg";
-    cv::imwrite(s+s1+s2,matOriginal);
 }

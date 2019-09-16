@@ -31,26 +31,20 @@ public:
     double getFrameRate();
 
 public slots:
-    void processFrameAndUpdateGUI();
+    void processFrameAndUpdateGUI(bool side);
 
 private slots:
-    void on_loadButton_clicked();
-    void on_playButton_clicked();
-    void on_pushButton_3_clicked();
+    void on_btnPlay_clicked(bool side);
+    void on_btnPause_clicked(bool side);
     QString getFormattedTime(int timeInSeconds);
-    void on_horizontalSlider_sliderPressed();
-    void on_horizontalSlider_sliderReleased();
-    void on_horizontalSlider_sliderMoved(int position);
-    void setCurrentFrame( int frameNumber);
-    void on_actionOpen_triggered();
-    void on_pushButton_clicked();
 
 private:
     Ui::MainWindow *ui;
-    cv::Mat matOriginal;
-    cv::VideoCapture capWebcam;
-    QImage qimgOriginal;
-    QTimer* qtimer;
-    OrtNet* ortNet;
+    cv::VideoCapture captureLeft;
+    cv::VideoCapture captureRight;
+    QTimer* qtimerLeft;
+    QTimer* qtimerRight;
+    OrtNet* ortNetLeft;
+    OrtNet* ortNetRight;
 };
 #endif // MAINWINDOW_H

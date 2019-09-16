@@ -7,17 +7,17 @@
     <x>0</x>
     <y>0</y>
     <width>750</width>
-    <height>680</height>
+    <height>660</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Media Player</string>
   </property>
   <widget class="QWidget" name="centralWidget">
-   <widget class="QLabel" name="lblPlay">
+   <widget class="QLabel" name="lblPlayerLeft">
     <property name="geometry">
      <rect>
-      <x>30</x>
+      <x>40</x>
       <y>10</y>
       <width>288</width>
       <height>512</height>
@@ -33,24 +33,11 @@
      <string/>
     </property>
    </widget>
-   <widget class="QPushButton" name="loadButton">
+   <widget class="QPushButton" name="btnPlayLeft">
     <property name="geometry">
      <rect>
-      <x>20</x>
-      <y>570</y>
-      <width>131</width>
-      <height>22</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Load a Video File</string>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="playButton">
-    <property name="geometry">
-     <rect>
-      <x>180</x>
-      <y>570</y>
+      <x>50</x>
+      <y>540</y>
       <width>80</width>
       <height>22</height>
      </rect>
@@ -59,11 +46,11 @@
      <string>Play</string>
     </property>
    </widget>
-   <widget class="QPushButton" name="pushButton_3">
+   <widget class="QPushButton" name="btnPauseLeft">
     <property name="geometry">
      <rect>
-      <x>280</x>
-      <y>570</y>
+      <x>140</x>
+      <y>540</y>
       <width>80</width>
       <height>22</height>
      </rect>
@@ -72,24 +59,11 @@
      <string>Pause</string>
     </property>
    </widget>
-   <widget class="QSlider" name="horizontalSlider">
+   <widget class="QLabel" name="lblTimerLeft">
     <property name="geometry">
      <rect>
-      <x>19</x>
+      <x>240</x>
       <y>540</y>
-      <width>701</width>
-      <height>20</height>
-     </rect>
-    </property>
-    <property name="orientation">
-     <enum>Qt::Horizontal</enum>
-    </property>
-   </widget>
-   <widget class="QLabel" name="label_2">
-    <property name="geometry">
-     <rect>
-      <x>640</x>
-      <y>570</y>
       <width>81</width>
       <height>20</height>
      </rect>
@@ -101,23 +75,10 @@
      <string/>
     </property>
    </widget>
-   <widget class="QPushButton" name="pushButton">
+   <widget class="QLabel" name="lblPlayerRight">
     <property name="geometry">
      <rect>
-      <x>380</x>
-      <y>570</y>
-      <width>101</width>
-      <height>22</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Take Snapshot</string>
-    </property>
-   </widget>
-   <widget class="QLabel" name="lblPlay_2">
-    <property name="geometry">
-     <rect>
-      <x>430</x>
+      <x>420</x>
       <y>10</y>
       <width>288</width>
       <height>512</height>
@@ -128,6 +89,48 @@
     </property>
     <property name="styleSheet">
      <string notr="true">Background-color: black;</string>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="btnPauseRight">
+    <property name="geometry">
+     <rect>
+      <x>520</x>
+      <y>540</y>
+      <width>80</width>
+      <height>22</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Pause</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="btnPlayRight">
+    <property name="geometry">
+     <rect>
+      <x>430</x>
+      <y>540</y>
+      <width>80</width>
+      <height>22</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Play</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="lblTimerRight">
+    <property name="geometry">
+     <rect>
+      <x>620</x>
+      <y>540</y>
+      <width>81</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="autoFillBackground">
+     <bool>true</bool>
     </property>
     <property name="text">
      <string/>
@@ -156,15 +159,9 @@
     <property name="title">
      <string>File</string>
     </property>
-    <addaction name="actionOpen"/>
    </widget>
    <addaction name="menuFile"/>
   </widget>
-  <action name="actionOpen">
-   <property name="text">
-    <string>Open</string>
-   </property>
-  </action>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <resources/>

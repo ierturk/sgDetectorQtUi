@@ -8,13 +8,17 @@
 OrtNet::OrtNet() {}
 OrtNet::~OrtNet() {}
 
+extern Ort::Env ortEnv;
+
 void OrtNet::Init(const char* model_path) {
-	env = Ort::Env(ORT_LOGGING_LEVEL_WARNING, "ssdOCV");
-	session_options.SetThreadPoolSize(1);
+
+    // env = Ort::Env(ORT_LOGGING_LEVEL_WARNING, "OrtEnv");
+    session_options.SetThreadPoolSize(2);
     session_options.SetGraphOptimizationLevel(2);
+    session_options.EnableSequentialExecution();
 
     // std::cout << "Using Onnxruntime C++ API" << std::endl;
-	session = Ort::Session(env, model_path, session_options);
+    session = Ort::Session(ortEnv, model_path, session_options);
 
 	// print number of model input nodes
     int num_input_nodes = session.GetInputCount();
