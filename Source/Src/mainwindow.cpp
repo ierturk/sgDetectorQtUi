@@ -45,10 +45,22 @@ QString MainWindow::getFormattedTime(int timeInSeconds) {
 
 void MainWindow::processFrameAndUpdateGUI(bool side) {
 
+    static int l, r = 0;
+
     cv::Mat frame;
     if(side) {
+        /*
+        captureRight.set(
+                    cv::CAP_PROP_POS_FRAMES,
+                    captureRight.get(cv::CAP_PROP_POS_FRAMES) + 5);
+        */
         captureRight.read(frame);
         if(frame.empty()) return;
+
+        if(++r<5)
+            return;
+        else
+            r=0;
 
         ortNetRight->setInputTensor(frame);
         ortNetRight->forward();
@@ -61,8 +73,19 @@ void MainWindow::processFrameAndUpdateGUI(bool side) {
         ui->lblPlayerRight->setScaledContents(true);
         ui->lblPlayerRight->setSizePolicy( QSizePolicy::Ignored, QSizePolicy::Ignored );
     } else {
+        /*
+        captureLeft.set(
+                    cv::CAP_PROP_POS_FRAMES,
+                    captureLeft.get(cv::CAP_PROP_POS_FRAMES) + 5);
+        */
+
         captureLeft.read(frame);
         if(frame.empty()) return;
+
+        if(++l<5)
+            return;
+        else
+            l=0;
 
         ortNetLeft->setInputTensor(frame);
         ortNetLeft->forward();
