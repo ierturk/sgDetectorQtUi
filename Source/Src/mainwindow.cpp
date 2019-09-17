@@ -17,7 +17,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->btnPauseLeft, &QAbstractButton::clicked, this, [this]{on_btnPause_clicked(false);});
 
 
-    ortEnv = Ort::Env(ORT_LOGGING_LEVEL_WARNING, "OrtEnv");
+    ortEnv = Ort::Env(ORT_LOGGING_LEVEL_FATAL, "OrtEnv");
 
     ortNetRight = new OrtNet();
     ortNetLeft = new OrtNet();

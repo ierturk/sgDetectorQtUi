@@ -121,13 +121,19 @@ void OrtNet::setInputTensor(const cv::Mat& frame)
 
 void OrtNet::forward()
 {
-	output_tensor = session.Run(
+    auto start = std::chrono::high_resolution_clock::now();
+
+    output_tensor = session.Run(
 		Ort::RunOptions{ nullptr },
 		input_node_names.data(),
 		&input_tensor,
 		input_node_names.size(),
 		output_node_names.data(),
 		output_node_names.size());
+
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    std::cout << "Inference time : " << duration.count() << " ms" << '\n';
 
     scores = output_tensor[0].GetTensorMutableData<float>();
     boxes = output_tensor[1].GetTensorMutableData<float>();

@@ -34,8 +34,6 @@ public slots:
     void processFrameAndUpdateGUI(bool side);
 
 private slots:
-    void on_btnPlay_clicked(bool side);
-    void on_btnPause_clicked(bool side);
     QString getFormattedTime(int timeInSeconds);
 
 private:
@@ -46,5 +44,8 @@ private:
     QTimer* qtimerRight;
     OrtNet* ortNetLeft;
     OrtNet* ortNetRight;
+
+    void on_btnPlay_clicked(bool side);
+    void on_btnPause_clicked(bool side);
 };
 #endif // MAINWINDOW_H
