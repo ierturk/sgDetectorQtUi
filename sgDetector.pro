@@ -27,12 +27,12 @@ FORMS += \
 
 INCLUDEPATH += \
     Source/Inc \
-    /home/ierturk/Work/Libs/libort/include
+    /home/ierturk/Work/Libs/libonnxrt/include
 
 CONFIG += link_pkgconfig
 PKGCONFIG += opencv4
 
-LIBS += -L/home/ierturk/Work/Libs/libort/lib -lonnxruntime
+LIBS += -L/home/ierturk/Work/Libs/libonnxrt/lib -lonnxruntime
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
