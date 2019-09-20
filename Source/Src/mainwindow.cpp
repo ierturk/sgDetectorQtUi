@@ -1,11 +1,10 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
-Ort::Env ortEnv = Ort::Env(nullptr);
+// Ort::Env ortEnv = Ort::Env(nullptr);
 
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent)
-    , ui(new Ui::MainWindow) {
+    : QMainWindow(parent), ui(new Ui::MainWindow) {
 
     ui->setupUi(this);
     qtimerRight = new QTimer(this);
@@ -17,13 +16,15 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->btnPauseLeft, &QAbstractButton::clicked, this, [this]{on_btnPause_clicked(false);});
 
 
-    ortEnv = Ort::Env(ORT_LOGGING_LEVEL_FATAL, "OrtEnv");
+    // ortEnv = Ort::Env(ORT_LOGGING_LEVEL_FATAL, "OrtEnv");
+    // ortNetRight = new OrtNet();
+    // ortNetLeft = new OrtNet();
+    // ortNetRight->Init("/home/ierturk/Work/REPOs/ssd/ssdIE/outputs/mobilenet_v2_ssd320_clk_trainval2019/model_040000.onnx");
+    // ortNetLeft->Init("/home/ierturk/Work/REPOs/ssd/ssdIE/outputs/mobilenet_v2_ssd320_clk_trainval2019/model_040000.onnx");
 
-    ortNetRight = new OrtNet();
-    ortNetLeft = new OrtNet();
+    ortNet = new OrtNet();
+    ortNet->Init("/home/ierturk/Work/REPOs/ssd/ssdIE/outputs/mobilenet_v2_ssd320_clk_trainval2019/model_040000.onnx");
 
-    ortNetRight->Init("/home/ierturk/Work/REPOs/ssd/ssdIE/outputs/mobilenet_v2_ssd320_clk_trainval2019/model_040000.onnx");
-    ortNetLeft->Init("/home/ierturk/Work/REPOs/ssd/ssdIE/outputs/mobilenet_v2_ssd320_clk_trainval2019/model_040000.onnx");
 }
 
 MainWindow::~MainWindow() {
@@ -62,14 +63,14 @@ void MainWindow::processFrameAndUpdateGUI(bool side) {
         else
             r=0;
 
-        ortNetRight->setInputTensor(frame);
-        ortNetRight->forward();
+        ortNet->setInputTensor(frame, side);
+        ortNet->forward(side);
         ui->lblTimerRight->setText(
                     getFormattedTime(
                         (int)captureRight.get(cv::CAP_PROP_POS_FRAMES)
                         / (int)captureRight.get(cv::CAP_PROP_FPS)));
 
-        ui->lblPlayerRight->setPixmap(QPixmap::fromImage(ortNetRight->getProcessedFrame()));
+        ui->lblPlayerRight->setPixmap(QPixmap::fromImage(ortNet->getProcessedFrame(side)));
         ui->lblPlayerRight->setScaledContents(true);
         ui->lblPlayerRight->setSizePolicy( QSizePolicy::Ignored, QSizePolicy::Ignored );
     } else {
@@ -87,14 +88,14 @@ void MainWindow::processFrameAndUpdateGUI(bool side) {
         else
             l=0;
 
-        ortNetLeft->setInputTensor(frame);
-        ortNetLeft->forward();
+        ortNet->setInputTensor(frame, side);
+        ortNet->forward(side);
         ui->lblTimerLeft->setText(
                     getFormattedTime(
                         (int)captureLeft.get(cv::CAP_PROP_POS_FRAMES)
                         / (int)captureLeft.get(cv::CAP_PROP_FPS)));
 
-        ui->lblPlayerLeft->setPixmap(QPixmap::fromImage(ortNetLeft->getProcessedFrame()));
+        ui->lblPlayerLeft->setPixmap(QPixmap::fromImage(ortNet->getProcessedFrame(side)));
         ui->lblPlayerLeft->setScaledContents(true);
         ui->lblPlayerLeft->setSizePolicy( QSizePolicy::Ignored, QSizePolicy::Ignored );
 
@@ -124,7 +125,7 @@ void MainWindow::on_btnPlay_clicked(bool side)
                             / (int)captureRight.get(cv::CAP_PROP_FPS)));
 
             connect(qtimerRight, &QTimer::timeout, this, [this]{processFrameAndUpdateGUI(true);});
-            qtimerRight->start();
+            qtimerRight->start(30);
         }
     } else {
         captureLeft.open(stream, cv::CAP_GSTREAMER);
@@ -139,7 +140,7 @@ void MainWindow::on_btnPlay_clicked(bool side)
                             / (int)captureLeft.get(cv::CAP_PROP_FPS)));
 
             connect(qtimerLeft, &QTimer::timeout, this, [this]{processFrameAndUpdateGUI(false);});
-            qtimerLeft->start();
+            qtimerLeft->start(30);
         }
     }
 }

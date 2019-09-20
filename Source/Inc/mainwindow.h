@@ -33,19 +33,19 @@ public:
 public slots:
     void processFrameAndUpdateGUI(bool side);
 
-private slots:
-    QString getFormattedTime(int timeInSeconds);
-
 private:
     Ui::MainWindow *ui;
     cv::VideoCapture captureLeft;
     cv::VideoCapture captureRight;
     QTimer* qtimerLeft;
     QTimer* qtimerRight;
-    OrtNet* ortNetLeft;
-    OrtNet* ortNetRight;
+    // OrtNet* ortNetLeft;
+    // OrtNet* ortNetRight;
+    OrtNet* ortNet;
 
     void on_btnPlay_clicked(bool side);
     void on_btnPause_clicked(bool side);
+    QString getFormattedTime(int timeInSeconds);
+
 };
 #endif // MAINWINDOW_H

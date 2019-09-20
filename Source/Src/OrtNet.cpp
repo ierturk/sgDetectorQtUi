@@ -8,17 +8,17 @@
 OrtNet::OrtNet() {}
 OrtNet::~OrtNet() {}
 
-extern Ort::Env ortEnv;
+// extern Ort::Env ortEnv;
 
 void OrtNet::Init(const char* model_path) {
 
-    // env = Ort::Env(ORT_LOGGING_LEVEL_WARNING, "OrtEnv");
-    session_options.SetThreadPoolSize(2);
+    env = Ort::Env(ORT_LOGGING_LEVEL_FATAL, "OrtEnv");
+    session_options.SetThreadPoolSize(4);
     session_options.SetGraphOptimizationLevel(2);
-    session_options.EnableSequentialExecution();
+    // session_options.EnableSequentialExecution();
 
     // std::cout << "Using Onnxruntime C++ API" << std::endl;
-    session = Ort::Session(ortEnv, model_path, session_options);
+    session = Ort::Session(env, model_path, session_options);
 
 	// print number of model input nodes
     int num_input_nodes = session.GetInputCount();
@@ -95,54 +95,81 @@ void OrtNet::Init(const char* model_path) {
 }
 
 
-void OrtNet::setInputTensor(const cv::Mat& frame)
+void OrtNet::setInputTensor(const cv::Mat& frame, bool side)
 {
 	static cv::Mat blob;
-    this->frame = frame;
-
-	blob = cv::dnn::blobFromImage(
+    blob = cv::dnn::blobFromImage(
         frame,
-		1.0,
-		cv::Size(320,320),
-		cv::Scalar(123, 117, 104),
-		true, 
-		false, 
-		CV_32F);
-	
-	input_tensor = Ort::Value::CreateTensor<float>(
-		allocator_info,
-		blob.ptr<float>(),
-		input_node_sizes[0],
-		input_node_dims[0].data(),
-		input_node_dims[0].size());
+        1.0,
+        cv::Size(320,320),
+        cv::Scalar(123, 117, 104),
+        true,
+        false,
+        CV_32F);
 
-	assert(input_tensor.IsTensor());
+    if(side) {
+        this->frame_right = frame;
+        input_tensor_right = Ort::Value::CreateTensor<float>(
+            allocator_info,
+            blob.ptr<float>(),
+            input_node_sizes[0],
+            input_node_dims[0].data(),
+            input_node_dims[0].size());
+        assert(input_tensor_right.IsTensor());
+
+    } else {
+        this->frame_left = frame;
+        input_tensor_left = Ort::Value::CreateTensor<float>(
+            allocator_info,
+            blob.ptr<float>(),
+            input_node_sizes[0],
+            input_node_dims[0].data(),
+            input_node_dims[0].size());
+        assert(input_tensor_left.IsTensor());
+    }
 }
 
-void OrtNet::forward()
+void OrtNet::forward(bool side)
 {
     auto start = std::chrono::high_resolution_clock::now();
 
-    output_tensor = session.Run(
-		Ort::RunOptions{ nullptr },
-		input_node_names.data(),
-		&input_tensor,
-		input_node_names.size(),
-		output_node_names.data(),
-		output_node_names.size());
+    if(side) {
+        output_tensor_right = session.Run(
+            Ort::RunOptions{ nullptr },
+            input_node_names.data(),
+            &input_tensor_right,
+            input_node_names.size(),
+            output_node_names.data(),
+            output_node_names.size());
+    } else {
+        output_tensor_left = session.Run(
+            Ort::RunOptions{ nullptr },
+            input_node_names.data(),
+            &input_tensor_left,
+            input_node_names.size(),
+            output_node_names.data(),
+            output_node_names.size());
+    }
 
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     std::cout << "Inference time : " << duration.count() << " ms" << '\n';
 
-    scores = output_tensor[0].GetTensorMutableData<float>();
-    boxes = output_tensor[1].GetTensorMutableData<float>();
+    // scores = output_tensor[0].GetTensorMutableData<float>();
+    // boxes = output_tensor[1].GetTensorMutableData<float>();
     // outs = std::make_pair(scores, boxes);
 }
 
-QImage OrtNet::getProcessedFrame() {
+QImage OrtNet::getProcessedFrame(bool side) {
+
+    static cv::Mat frame;
+    if(side)
+        frame = frame_right;
+    else
+        frame = frame_left;
+
     cv::cvtColor(frame, frame, cv::COLOR_BGR2RGB);
-    postprocess();
+    postprocess(frame, side);
     return QImage(
             frame.data,
             frame.cols,
@@ -151,11 +178,22 @@ QImage OrtNet::getProcessedFrame() {
             QImage::Format_RGB888);
 }
 
-void OrtNet::postprocess()
+void OrtNet::postprocess(cv::Mat& frame, bool side)
 {
     std::vector<int> p_classIds;
     std::vector<float> p_confidences;
     std::vector<cv::Rect> p_boxes;
+    float* scores;
+    float* boxes;
+
+    if(side) {
+        scores = output_tensor_right[0].GetTensorMutableData<float>();
+        boxes = output_tensor_right[1].GetTensorMutableData<float>();
+
+    } else {
+        scores = output_tensor_left[0].GetTensorMutableData<float>();
+        boxes = output_tensor_left[1].GetTensorMutableData<float>();
+    }
 
     // CV_Assert(scores[0] > 0);
 
@@ -184,12 +222,12 @@ void OrtNet::postprocess()
     {
         int idx = p_indices[i];
         cv::Rect box = p_boxes[idx];
-        drawPred(p_classIds[idx], p_confidences[idx], box.x, box.y,
+        drawPred(frame, p_classIds[idx], p_confidences[idx], box.x, box.y,
             box.x + box.width, box.y + box.height);
     }
 }
 
-void OrtNet::drawPred(int classId, float conf, int left, int top, int right, int bottom)
+void OrtNet::drawPred(cv::Mat& frame, int classId, float conf, int left, int top, int right, int bottom)
 {
     cv::rectangle(frame, cv::Point(left, top), cv::Point(right, bottom), cv::Scalar(0, 255, 0));
 
