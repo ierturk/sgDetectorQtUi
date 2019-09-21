@@ -46,7 +46,7 @@ QString MainWindow::getFormattedTime(int timeInSeconds) {
 
 void MainWindow::processFrameAndUpdateGUI(bool side) {
 
-    static int l, r = 0;
+    // static int l, r = 0;
 
     cv::Mat frame;
     if(side) {
@@ -57,12 +57,13 @@ void MainWindow::processFrameAndUpdateGUI(bool side) {
         */
         captureRight.read(frame);
         if(frame.empty()) return;
-
+        cv::rotate(frame, frame, cv::ROTATE_90_CLOCKWISE);
+/*
         if(++r<5)
             return;
         else
             r=0;
-
+*/
         ortNet->setInputTensor(frame, side);
         ortNet->forward(side);
         ui->lblTimerRight->setText(
@@ -82,12 +83,13 @@ void MainWindow::processFrameAndUpdateGUI(bool side) {
 
         captureLeft.read(frame);
         if(frame.empty()) return;
-
+        cv::rotate(frame, frame, cv::ROTATE_90_CLOCKWISE);
+/*
         if(++l<5)
             return;
         else
             l=0;
-
+*/
         ortNet->setInputTensor(frame, side);
         ortNet->forward(side);
         ui->lblTimerLeft->setText(
@@ -104,16 +106,19 @@ void MainWindow::processFrameAndUpdateGUI(bool side) {
 
 void MainWindow::on_btnPlay_clicked(bool side)
 {
+    /*
     QString fname = QFileDialog::getOpenFileName(
                         this,
                         tr("Open Images"),
                         "/home/ierturk/Work/REPOs/data/farmData/",
                         tr("mp4 File (*.mp4);; avi File (*.avi)"));
 
-    std::string stream = "filesrc location=" + fname.toStdString() + " ! decodebin ! videoconvert ! videoflip method=clockwise ! appsink";
+    // std::string stream = "filesrc location=" + fname.toStdString() + " ! decodebin ! videoconvert ! videoflip method=clockwise ! appsink";
+    */
 
     if(side) {
-        captureRight.open(stream, cv::CAP_GSTREAMER);
+        std::string stream = "http://localhost:8080/5a196e4ef3f6e8ebeaadf150e0e6298a/mp4/pnOOUNJfOo/ParlourRightCam/s.mp4";
+        captureRight.open(stream);
         if(captureRight.isOpened() == false) {
             std::cout << "error: Right side capture is not accessed successfully";
             return;
@@ -125,10 +130,11 @@ void MainWindow::on_btnPlay_clicked(bool side)
                             / (int)captureRight.get(cv::CAP_PROP_FPS)));
 
             connect(qtimerRight, &QTimer::timeout, this, [this]{processFrameAndUpdateGUI(true);});
-            qtimerRight->start(30);
+            qtimerRight->start();
         }
     } else {
-        captureLeft.open(stream, cv::CAP_GSTREAMER);
+        std::string stream = "http://localhost:8080/5a196e4ef3f6e8ebeaadf150e0e6298a/mp4/pnOOUNJfOo/ParlourLeftCam/s.mp4";
+        captureLeft.open(stream);
         if(captureLeft.isOpened() == false) {
             std::cout << "error: Left side capture is not accessed successfully";
             return;
@@ -140,7 +146,7 @@ void MainWindow::on_btnPlay_clicked(bool side)
                             / (int)captureLeft.get(cv::CAP_PROP_FPS)));
 
             connect(qtimerLeft, &QTimer::timeout, this, [this]{processFrameAndUpdateGUI(false);});
-            qtimerLeft->start(30);
+            qtimerLeft->start();
         }
     }
 }
