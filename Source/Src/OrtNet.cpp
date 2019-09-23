@@ -15,9 +15,7 @@ void OrtNet::Init(const char* model_path) {
     env = Ort::Env(ORT_LOGGING_LEVEL_FATAL, "OrtEnv");
     session_options.SetThreadPoolSize(4);
     session_options.SetGraphOptimizationLevel(2);
-    // session_options.EnableSequentialExecution();
 
-    // std::cout << "Using Onnxruntime C++ API" << std::endl;
     session = Ort::Session(env, model_path, session_options);
 
 	// print number of model input nodes
@@ -133,7 +131,7 @@ void OrtNet::setInputTensor(const cv::Mat& frame, bool side)
 
 void OrtNet::forward(bool side)
 {
-    auto start = std::chrono::high_resolution_clock::now();
+    // auto start = std::chrono::high_resolution_clock::now();
 
     if(side) {
         iosRight->output_tensor = session.Run(
@@ -153,9 +151,9 @@ void OrtNet::forward(bool side)
             output_node_names.size());
     }
 
-    auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-    std::cout << "Inference time : " << duration.count() << " ms" << '\n';
+    // auto end = std::chrono::high_resolution_clock::now();
+    // auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    // std::cout << "Inference time : " << duration.count() << " ms" << '\n';
 
     // scores = output_tensor[0].GetTensorMutableData<float>();
     // boxes = output_tensor[1].GetTensorMutableData<float>();
