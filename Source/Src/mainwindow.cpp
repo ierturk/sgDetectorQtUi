@@ -49,12 +49,12 @@ void MainWindow::captureFrame(bool side) {
     if(side) {
         captureRight.read(frame);
         if(frame.empty()) return;
-        cv::rotate(frame, frame, cv::ROTATE_90_CLOCKWISE);
+        // cv::rotate(frame, frame, cv::ROTATE_90_CLOCKWISE);
         capturedFrameQueueRight.push(frame.clone());
     } else {
         captureLeft.read(frame);
         if(frame.empty()) return;
-        cv::rotate(frame, frame, cv::ROTATE_90_CLOCKWISE);
+        // cv::rotate(frame, frame, cv::ROTATE_90_CLOCKWISE);
         capturedFrameQueueLeft.push(frame.clone());
     }
 }
@@ -107,9 +107,9 @@ void MainWindow::updateGUI() {
         qPainter.setFont(QFont(font.family(), 32));
         QPen penHText(QColor("#00e0fc"));
         qPainter.setPen(penHText);
-        qPainter.drawText(10, 40, QString("Camera: %1 FPS").arg(capturedFrameQueueRight.getFPS()));
-        qPainter.drawText(10, 80, QString("Network: %1 FPS").arg(resultQueueRight.getFPS()));
-        qPainter.drawText(10, 120,QString("Skipped frames: %1 FPS").arg(capturedFrameQueueRight.counter - resultQueueRight.counter));
+        qPainter.drawText(10, 620, QString("Camera: %1 FPS").arg(capturedFrameQueueRight.getFPS()));
+        qPainter.drawText(10, 660, QString("Network: %1 FPS").arg(resultQueueRight.getFPS()));
+        qPainter.drawText(10, 700,QString("Skipped frames: %1 FPS").arg(capturedFrameQueueRight.counter - resultQueueRight.counter));
 
         ui->lblPlayerRight->setPixmap(QPixmap::fromImage(image));
         ui->lblPlayerRight->setScaledContents(true);
@@ -129,9 +129,9 @@ void MainWindow::updateGUI() {
         qPainter.setFont(QFont(font.family(), 32));
         QPen penHText(QColor("#00e0fc"));
         qPainter.setPen(penHText);
-        qPainter.drawText(10, 40, QString("Camera: %1 FPS").arg(capturedFrameQueueLeft.getFPS()));
-        qPainter.drawText(10, 80, QString("Network: %1 FPS").arg(resultQueueLeft.getFPS()));
-        qPainter.drawText(10, 120,QString("Skipped frames: %1 FPS").arg(capturedFrameQueueLeft.counter - resultQueueLeft.counter));
+        qPainter.drawText(10, 620, QString("Camera: %1 FPS").arg(capturedFrameQueueLeft.getFPS()));
+        qPainter.drawText(10, 660, QString("Network: %1 FPS").arg(resultQueueLeft.getFPS()));
+        qPainter.drawText(10, 700,QString("Skipped frames: %1 FPS").arg(capturedFrameQueueLeft.counter - resultQueueLeft.counter));
 
         ui->lblPlayerLeft->setPixmap(QPixmap::fromImage(image));
         ui->lblPlayerLeft->setScaledContents(true);
