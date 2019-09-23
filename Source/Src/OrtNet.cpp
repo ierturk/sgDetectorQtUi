@@ -239,7 +239,7 @@ void OrtNet::drawPred(cv::Mat& frame, int classId, float conf, int left, int top
     }
 
     int baseLine;
-    cv::Size labelSize = cv::getTextSize(label, cv::FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseLine);
+    cv::Size labelSize = cv::getTextSize(label, cv::FONT_HERSHEY_SIMPLEX, 1.2, 1.2, &baseLine);
     top = cv::max(top, labelSize.height);
 
     cv::rectangle(frame,
@@ -252,6 +252,6 @@ void OrtNet::drawPred(cv::Mat& frame, int classId, float conf, int left, int top
                 label,
                 cv::Point(left, top),
                 cv::FONT_HERSHEY_SIMPLEX,
-                0.5,
+                1.0,
                 cv::Scalar());
 }
