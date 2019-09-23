@@ -19,6 +19,7 @@ SOURCES += \
     Source/Src/OrtNet.cpp
 
 HEADERS += \
+    Source/Inc/QueueFPS.h \
     Source/Inc/mainwindow.h \
     Source/Inc/OrtNet.h
 

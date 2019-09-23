@@ -108,24 +108,26 @@ void OrtNet::setInputTensor(const cv::Mat& frame, bool side)
         CV_32F);
 
     if(side) {
-        this->frame_right = frame;
-        input_tensor_right = Ort::Value::CreateTensor<float>(
+
+        iosRight->frame = frame;
+        iosRight->input_tensor = Ort::Value::CreateTensor<float>(
             allocator_info,
             blob.ptr<float>(),
             input_node_sizes[0],
             input_node_dims[0].data(),
             input_node_dims[0].size());
-        assert(input_tensor_right.IsTensor());
+        assert(iosRight->input_tensor.IsTensor());
 
     } else {
-        this->frame_left = frame;
-        input_tensor_left = Ort::Value::CreateTensor<float>(
+        iosLeft->frame = frame;
+
+        iosLeft->input_tensor = Ort::Value::CreateTensor<float>(
             allocator_info,
             blob.ptr<float>(),
             input_node_sizes[0],
             input_node_dims[0].data(),
             input_node_dims[0].size());
-        assert(input_tensor_left.IsTensor());
+        assert(iosLeft->input_tensor.IsTensor());
     }
 }
 
@@ -134,18 +136,18 @@ void OrtNet::forward(bool side)
     auto start = std::chrono::high_resolution_clock::now();
 
     if(side) {
-        output_tensor_right = session.Run(
+        iosRight->output_tensor = session.Run(
             Ort::RunOptions{ nullptr },
             input_node_names.data(),
-            &input_tensor_right,
+            &(iosRight->input_tensor),
             input_node_names.size(),
             output_node_names.data(),
             output_node_names.size());
     } else {
-        output_tensor_left = session.Run(
+        iosLeft->output_tensor = session.Run(
             Ort::RunOptions{ nullptr },
             input_node_names.data(),
-            &input_tensor_left,
+            &(iosLeft->input_tensor),
             input_node_names.size(),
             output_node_names.data(),
             output_node_names.size());
@@ -164,9 +166,9 @@ QImage OrtNet::getProcessedFrame(bool side) {
 
     static cv::Mat frame;
     if(side)
-        frame = frame_right;
+        frame = iosRight->frame;
     else
-        frame = frame_left;
+        frame = iosLeft->frame;
 
     cv::cvtColor(frame, frame, cv::COLOR_BGR2RGB);
     postprocess(frame, side);
@@ -187,12 +189,12 @@ void OrtNet::postprocess(cv::Mat& frame, bool side)
     float* boxes;
 
     if(side) {
-        scores = output_tensor_right[0].GetTensorMutableData<float>();
-        boxes = output_tensor_right[1].GetTensorMutableData<float>();
+        scores = iosRight->output_tensor[0].GetTensorMutableData<float>();
+        boxes = iosRight->output_tensor[1].GetTensorMutableData<float>();
 
     } else {
-        scores = output_tensor_left[0].GetTensorMutableData<float>();
-        boxes = output_tensor_left[1].GetTensorMutableData<float>();
+        scores = iosLeft->output_tensor[0].GetTensorMutableData<float>();
+        boxes = iosLeft->output_tensor[1].GetTensorMutableData<float>();
     }
 
     // CV_Assert(scores[0] > 0);

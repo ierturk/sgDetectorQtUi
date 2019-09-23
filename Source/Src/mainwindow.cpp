@@ -7,20 +7,20 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow) {
 
     ui->setupUi(this);
-    qtimerRight = new QTimer(this);
-    qtimerLeft = new QTimer(this);
+    captureTimerRight = new QTimer(this);
+    captureTimerLeft = new QTimer(this);
+    processTimerRight = new QTimer(this);
+    processTimerLeft = new QTimer(this);
+    viewerTimer = new QTimer(this);
 
+    connect(ui->btnLoadRight, &QAbstractButton::clicked, this, [this]{on_btnLoad_clicked(true);});
+    connect(ui->btnLoadLeft, &QAbstractButton::clicked, this, [this]{on_btnLoad_clicked(false);});
     connect(ui->btnPlayRight, &QAbstractButton::clicked, this, [this]{on_btnPlay_clicked(true);});
     connect(ui->btnPlayLeft, &QAbstractButton::clicked, this, [this]{on_btnPlay_clicked(false);});
-    connect(ui->btnPauseRight, &QAbstractButton::clicked, this, [this]{on_btnPause_clicked(true);});
-    connect(ui->btnPauseLeft, &QAbstractButton::clicked, this, [this]{on_btnPause_clicked(false);});
 
+    connect(viewerTimer, &QTimer::timeout, this, [this]{updateGUI();});
+    viewerTimer->start(30);
 
-    // ortEnv = Ort::Env(ORT_LOGGING_LEVEL_FATAL, "OrtEnv");
-    // ortNetRight = new OrtNet();
-    // ortNetLeft = new OrtNet();
-    // ortNetRight->Init("/home/ierturk/Work/REPOs/ssd/ssdIE/outputs/mobilenet_v2_ssd320_clk_trainval2019/model_040000.onnx");
-    // ortNetLeft->Init("/home/ierturk/Work/REPOs/ssd/ssdIE/outputs/mobilenet_v2_ssd320_clk_trainval2019/model_040000.onnx");
 
     ortNet = new OrtNet();
     ortNet->Init("/home/ierturk/Work/REPOs/ssd/ssdIE/outputs/mobilenet_v2_ssd320_clk_trainval2019/model_040000.onnx");
@@ -44,130 +44,167 @@ QString MainWindow::getFormattedTime(int timeInSeconds) {
 }
 
 
-void MainWindow::processFrameAndUpdateGUI(bool side) {
-
-    // static int l, r = 0;
-
+void MainWindow::captureFrame(bool side) {
     cv::Mat frame;
     if(side) {
-        /*
-        captureRight.set(
-                    cv::CAP_PROP_POS_FRAMES,
-                    captureRight.get(cv::CAP_PROP_POS_FRAMES) + 5);
-        */
         captureRight.read(frame);
         if(frame.empty()) return;
         cv::rotate(frame, frame, cv::ROTATE_90_CLOCKWISE);
-/*
-        if(++r<5)
-            return;
-        else
-            r=0;
-*/
-        ortNet->setInputTensor(frame, side);
-        ortNet->forward(side);
+        capturedFrameQueueRight.push(frame.clone());
+    } else {
+        captureLeft.read(frame);
+        if(frame.empty()) return;
+        cv::rotate(frame, frame, cv::ROTATE_90_CLOCKWISE);
+        capturedFrameQueueLeft.push(frame.clone());
+    }
+}
+
+void MainWindow::processFrame(bool side) {
+    if(side) {
+        cv::Mat frame;
+        if (!capturedFrameQueueRight.empty())
+        {
+            frame = capturedFrameQueueRight.get();
+            capturedFrameQueueRight.clear();
+        }
+
+        if (!frame.empty())
+        {
+            ortNet->setInputTensor(frame, side);
+            ortNet->forward(side);
+            resultQueueRight.push(ortNet->getProcessedFrame(side));
+        }
+
+    } else {
+        cv::Mat frame;
+        if (!capturedFrameQueueLeft.empty())
+        {
+            frame = capturedFrameQueueLeft.get();
+            capturedFrameQueueLeft.clear();
+        }
+
+        if (!frame.empty())
+        {
+            ortNet->setInputTensor(frame, side);
+            ortNet->forward(side);
+            resultQueueLeft.push(ortNet->getProcessedFrame(side));
+        }
+    }
+}
+
+
+void MainWindow::updateGUI() {
+
+    if(!resultQueueRight.empty()) {
         ui->lblTimerRight->setText(
                     getFormattedTime(
                         (int)captureRight.get(cv::CAP_PROP_POS_FRAMES)
                         / (int)captureRight.get(cv::CAP_PROP_FPS)));
 
-        ui->lblPlayerRight->setPixmap(QPixmap::fromImage(ortNet->getProcessedFrame(side)));
+        QImage image = resultQueueRight.get();
+        QPainter qPainter(&image);
+        QFontInfo font = qPainter.fontInfo();
+        qPainter.setFont(QFont(font.family(), 32));
+        QPen penHText(QColor("#00e0fc"));
+        qPainter.setPen(penHText);
+        qPainter.drawText(10, 40, QString("Camera: %1 FPS").arg(capturedFrameQueueRight.getFPS()));
+        qPainter.drawText(10, 80, QString("Network: %1 FPS").arg(resultQueueRight.getFPS()));
+        qPainter.drawText(10, 120,QString("Skipped frames: %1 FPS").arg(capturedFrameQueueRight.counter - resultQueueRight.counter));
+
+        ui->lblPlayerRight->setPixmap(QPixmap::fromImage(image));
         ui->lblPlayerRight->setScaledContents(true);
         ui->lblPlayerRight->setSizePolicy( QSizePolicy::Ignored, QSizePolicy::Ignored );
-    } else {
-        /*
-        captureLeft.set(
-                    cv::CAP_PROP_POS_FRAMES,
-                    captureLeft.get(cv::CAP_PROP_POS_FRAMES) + 5);
-        */
 
-        captureLeft.read(frame);
-        if(frame.empty()) return;
-        cv::rotate(frame, frame, cv::ROTATE_90_CLOCKWISE);
-/*
-        if(++l<5)
-            return;
-        else
-            l=0;
-*/
-        ortNet->setInputTensor(frame, side);
-        ortNet->forward(side);
+    }
+
+    if(!resultQueueLeft.empty()) {
         ui->lblTimerLeft->setText(
                     getFormattedTime(
                         (int)captureLeft.get(cv::CAP_PROP_POS_FRAMES)
                         / (int)captureLeft.get(cv::CAP_PROP_FPS)));
 
-        ui->lblPlayerLeft->setPixmap(QPixmap::fromImage(ortNet->getProcessedFrame(side)));
+        QImage image = resultQueueLeft.get();
+        QPainter qPainter(&image);
+        QFontInfo font = qPainter.fontInfo();
+        qPainter.setFont(QFont(font.family(), 32));
+        QPen penHText(QColor("#00e0fc"));
+        qPainter.setPen(penHText);
+        qPainter.drawText(10, 40, QString("Camera: %1 FPS").arg(capturedFrameQueueLeft.getFPS()));
+        qPainter.drawText(10, 80, QString("Network: %1 FPS").arg(resultQueueLeft.getFPS()));
+        qPainter.drawText(10, 120,QString("Skipped frames: %1 FPS").arg(capturedFrameQueueLeft.counter - resultQueueLeft.counter));
+
+        ui->lblPlayerLeft->setPixmap(QPixmap::fromImage(image));
         ui->lblPlayerLeft->setScaledContents(true);
         ui->lblPlayerLeft->setSizePolicy( QSizePolicy::Ignored, QSizePolicy::Ignored );
 
     }
 }
 
-void MainWindow::on_btnPlay_clicked(bool side)
+void MainWindow::on_btnLoad_clicked(bool side)
 {
-    /*
-    QString fname = QFileDialog::getOpenFileName(
-                        this,
-                        tr("Open Images"),
-                        "/home/ierturk/Work/REPOs/data/farmData/",
-                        tr("mp4 File (*.mp4);; avi File (*.avi)"));
+/*
+    bool ok;
+    QString videoURL = QInputDialog::getText(this, tr("Please provide a valid vide url"),
+                                         tr("Video URL"), QLineEdit::Normal,
+                                         "http://", &ok);
 
-    // std::string stream = "filesrc location=" + fname.toStdString() + " ! decodebin ! videoconvert ! videoflip method=clockwise ! appsink";
-    */
+    if (ok && !videoURL.isEmpty())
+        std::cout << videoURL.toStdString() << std::endl;
+    else
+        std::cout << "Please provide a valid vide url!" << std::endl;
+*/
 
     if(side) {
-        std::string stream = "http://localhost:8080/5a196e4ef3f6e8ebeaadf150e0e6298a/mp4/pnOOUNJfOo/ParlourRightCam/s.mp4";
+        std::string stream = "http://localhost:8080/b8d7ea94eb5b4cc9f6c9df963cfae5be/mp4/pnOOUNJfOo/RightCam/s.mp4";
         captureRight.open(stream);
         if(captureRight.isOpened() == false) {
             std::cout << "error: Right side capture is not accessed successfully";
             return;
         } else {
-
             ui->lblTimerRight->setText(
                         getFormattedTime(
                             (int)captureRight.get(cv::CAP_PROP_POS_FRAMES)
                             / (int)captureRight.get(cv::CAP_PROP_FPS)));
 
-            connect(qtimerRight, &QTimer::timeout, this, [this]{processFrameAndUpdateGUI(true);});
-            qtimerRight->start();
+            connect(captureTimerRight, &QTimer::timeout, this, [this]{captureFrame(true);});
+            captureTimerRight->start(30);
+            connect(processTimerRight, &QTimer::timeout, this, [this]{processFrame(true);});
         }
     } else {
-        std::string stream = "http://localhost:8080/5a196e4ef3f6e8ebeaadf150e0e6298a/mp4/pnOOUNJfOo/ParlourLeftCam/s.mp4";
+        std::string stream = "http://localhost:8080/b8d7ea94eb5b4cc9f6c9df963cfae5be/mp4/pnOOUNJfOo/LeftCam/s.mp4";
         captureLeft.open(stream);
         if(captureLeft.isOpened() == false) {
             std::cout << "error: Left side capture is not accessed successfully";
             return;
         } else {
-
             ui->lblTimerLeft->setText(
                         getFormattedTime(
                             (int)captureLeft.get(cv::CAP_PROP_POS_FRAMES)
                             / (int)captureLeft.get(cv::CAP_PROP_FPS)));
 
-            connect(qtimerLeft, &QTimer::timeout, this, [this]{processFrameAndUpdateGUI(false);});
-            qtimerLeft->start();
+            connect(captureTimerLeft, &QTimer::timeout, this, [this]{captureFrame(false);});
+            captureTimerLeft->start(30);
+            connect(processTimerLeft, &QTimer::timeout, this, [this]{processFrame(false);});
         }
     }
 }
 
-void MainWindow::on_btnPause_clicked(bool side) {
+void MainWindow::on_btnPlay_clicked(bool side) {
     if(side) {
-        if(qtimerRight->isActive()) {
-            qtimerRight->stop();
-            ui->btnPauseRight->setText("Resume");
+        if(processTimerRight->isActive()) {
+            processTimerRight->stop();
+            ui->btnPlayRight->setText("Play");
         } else {
-            qtimerRight->start();
-            ui->btnPauseRight->setText("Pause");
+            processTimerRight->start(30);
+            ui->btnPlayRight->setText("Pause");
         }
     } else {
-        if(qtimerLeft->isActive()) {
-            qtimerLeft->stop();
-            ui->btnPauseLeft->setText("Resume");
+        if(processTimerLeft->isActive()) {
+            processTimerLeft->stop();
+            ui->btnPlayLeft->setText("Play");
         } else {
-            qtimerLeft->start();
-            ui->btnPauseLeft->setText("Pause");
+            processTimerLeft->start(30);
+            ui->btnPlayLeft->setText("Pause");
         }
-
     }
 }
